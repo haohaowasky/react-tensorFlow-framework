@@ -43,7 +43,7 @@ const x = tf.variable(tf.scalar(Math.random()));
 // c.print();
 // d.print();
 
-// predict function the model 
+// predict function the model
 function predict(x) {
   // y = a * x ^ 3 + b * x ^ 2 + c * x + d
   return tf.tidy(() => {
