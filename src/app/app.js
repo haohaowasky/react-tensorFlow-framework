@@ -1,20 +1,8 @@
-import * as tf from '@tensorflow/tfjs';
+import React from 'react';
+import ReactDOM from 'react-dom';
+import MLapp from './index';
 
-// hand written digit
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-//
+ReactDOM.render(
+  <MLapp/>,
+  document.getElementById('tensorDapp')
+);
