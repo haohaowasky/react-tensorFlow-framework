@@ -16,6 +16,11 @@ import 'antd/dist/antd.min.css';
 require('./style.css');
 
 // Ethereum
+const contractAddress = '0x9c4795922ac0e56d5013a777046108a4d751b382';
+const abi = require('../../Contract/abi');
+const mycontract = web3.eth.contract(abi);
+const myContractInstance = mycontract.at(contractAddress);
+
 //smile or not smile
 const NUM_CLASSES = 2;
 
@@ -55,6 +60,13 @@ async function loadMobilenet() {
 };
 
 
+
+async function issueToken(){
+  var getData = myContractInstance.sendToken.getData(web3.eth.accounts[0], 200);
+  await web3.eth.sendTransaction({from:web3.eth.accounts[0], to:contractAddress, data:getData},(err,res) =>{
+    console.log("tokenIssued");
+  });
+}
 /**
  * Sets up and trains the classifier.
  */
@@ -146,6 +158,7 @@ async function predict() {
     console.log(result[classId]);
     counter[result[classId]] +=1;
     if (counter["smile"] >= 100){
+      issueToken();
       break;
     }
     predictedClass.dispose();
@@ -205,12 +218,14 @@ class MLapp extends Component {
     smileLabel:0,
     account:web3.eth.accounts[0],
     others:0,
+    smilecoin:0
   }
 
   this.startPredict = this.startPredict.bind(this);
   this.startTrain = this.startTrain.bind(this);
   this.incrementSmile = this.incrementSmile.bind(this);
   this.incrementOther = this.incrementOther.bind(this);
+  this.showAccount = this.showAccount.bind(this);
 
 }
 
@@ -226,17 +241,24 @@ class MLapp extends Component {
 
   incrementSmile() {
     ExampleHandler(0);
-    this.setState( {account:web3.eth.accounts[0]});
+    //this.setState( {account:web3.eth.accounts[0]});
     this.setState({ smileLabel: this.state.smileLabel + 1 });
   }
 
   incrementOther() {
     ExampleHandler(1);
-    alert(this.state.account);
+    //alert(this.state.account);
     this.setState({ others: this.state.others + 1 });
   }
 
-   componentDidMount() {
+  async showAccount(){
+    await myContractInstance.getBalance(web3.eth.accounts[0],function(err,result){
+      this.setState( {smilecoin:result.c[0]});
+    }.bind(this));
+    this.setState( {account:web3.eth.accounts[0]});
+  }
+
+  componentDidMount() {
      this.setState( {account:web3.eth.accounts[0]});
   }
 
@@ -251,11 +273,15 @@ class MLapp extends Component {
           <p>learning rate: 0.0001 Batch size: 0.4 Epochs: 20 Hidden units: 100</p>
           <Content>
           <p>the account number is: {this.state.account}</p>
+          <p>You have : {this.state.smilecoin} smile coins now</p>
           <Button onClick={this.startTrain}>Train</Button>
           <Button type="primary" onClick={this.startPredict}>Go</Button>
           <Divider>Add Samples </Divider>
           <Button  onClick={this.incrementSmile}>simileSample:{this.state.smileLabel}</Button>
           <Button  onClick={this.incrementOther}>otherSample:{this.state.others}</Button>
+          <br/>
+          <br/>
+          <Button type="primary" onClick={this.showAccount}>Show Account</Button>
           </Content>
       </Layout>
     );
