@@ -17,3 +17,7 @@ You can earn ERC223 token by smiling beautifully to the camera， tensorFlow is 
 * `npm install`
 * `npm start`
 * visit http://localhost:8080/
+
+## Smilecoin
+
+* https://rinkeby.etherscan.io/token/0x606b84d1152a24ca1b08360fcf5011c0a79f7506
