@@ -1,0 +1,32 @@
+.params-webcam-row {
+  align-items: flex-start;
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  margin-top: 35px;
+}
+.webcam-box-outer {
+  background: black;
+  border: 1px solid #585858;
+  border-radius: 4px;
+  box-sizing: border-box;
+  display: inline-block;
+  padding: 9px;
+}
+.webcam-box-inner {
+  border: 1px solid #585858;
+  border-radius: 4px;
+  box-sizing: border-box;
+  display: flex;
+  justify-content: center;
+  overflow: hidden;
+  width: 160px;
+}
+#webcam {
+  height: 160px;
+  transform: scaleX(-1);
+}
+
+Layout.Header{
+  color: #FFFFFF;
+}
