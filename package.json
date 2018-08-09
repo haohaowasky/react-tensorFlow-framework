@@ -6,14 +6,17 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "npm run build",
-    "build": "webpack -d && webpack-dev-server --content-base src/ --inline --hot --port 8080 --history-api-fallback"
+    "build": "webpack -d && webpack-dev-server --content-base src/ --inline --hot --port 3000 --history-api-fallback"
   },
   "author": "",
   "license": "ISC",
   "dependencies": {
     "@tensorflow/tfjs": "^0.11.4",
+    "ipfs-api": "^22.2.2",
+    "js-file-download": "^0.4.1",
     "react": "^16.4.0",
     "react-dom": "^16.4.0",
+    "react-router": "^3.2.1",
     "react-webcam": "^0.5.0"
   },
   "devDependencies": {

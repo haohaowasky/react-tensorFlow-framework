@@ -17,6 +17,7 @@ module.exports = {
                 query: {
                     presets: ['react', 'es2017']
                 }
+                
             },
 
 
@@ -24,8 +25,14 @@ module.exports = {
                 test: /\.css$/,
                 loader: 'style-loader!css-loader'
             }
+            
         ]
-    }
+    },
+    node: {
+        fs: 'empty',
+        child_process: 'empty',
+      }
+
 
 
 };

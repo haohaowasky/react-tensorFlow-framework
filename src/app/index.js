@@ -4,22 +4,34 @@ import * as tf from '@tensorflow/tfjs';
 //react
 import React, { Component } from 'react';
 var ReactDOM = require('react-dom');
+import { Router, Route, browserHistory, Link} from 'react-router';
+
 
 // other tf files
 import {ControllerDataset} from './data_set';
 import {Webcam} from './webcam';
+//import {Colony} from './colony'
 
 //ui
-import { Layout , Divider, Button} from 'antd';
+import { Layout , Divider, Button, Menu} from 'antd';
 const { Header, Footer, Sider, Content } = Layout;
 import 'antd/dist/antd.min.css';
 require('./style.css');
+
 
 // Ethereum
 const contractAddress = '0x9c4795922ac0e56d5013a777046108a4d751b382';
 const abi = require('../../Contract/abi');
 const mycontract = web3.eth.contract(abi);
 const myContractInstance = mycontract.at(contractAddress);
+
+// ipfs
+var ipfsAPI = require('ipfs-api');
+var ipfs = ipfsAPI('ipfs.infura.io', '5001', {protocol: 'https'});
+
+//files
+const fileDownload = require('js-file-download');
+
 
 //smile or not smile
 const NUM_CLASSES = 2;
@@ -62,7 +74,7 @@ async function loadMobilenet() {
 
 
 async function issueToken(){
-  var getData = myContractInstance.sendToken.getData(web3.eth.accounts[0], 200);
+  var getData = myContractInstance.sendToken.getData(web3.eth.accounts[0], 2);
   await web3.eth.sendTransaction({from:web3.eth.accounts[0], to:contractAddress, data:getData},(err,res) =>{
     console.log("tokenIssued");
   });
@@ -139,7 +151,31 @@ async function train(dense_unit) {
 let isPredicting = false;
 
 async function predict() {
-  console.log("predicting")
+  console.log(isPredicting)
+  // model = tf.sequential({
+  //   layers: [
+  //     // Flattens the input to a vector so we can use it in a dense layer. While
+  //     // technically a layer, this only performs a reshape (and has no training
+  //     // parameters).
+  //     tf.layers.flatten({inputShape: [7, 7, 256]}),
+  //     // Layer 1
+  //     tf.layers.dense({
+  //       units: 10,
+  //       activation: 'relu',
+  //       kernelInitializer: 'varianceScaling',
+  //       useBias: true
+  //     }),
+  //     // Layer 2. The number of units of the last layer should correspond
+  //     // to the number of classes we want to predict.
+  //     tf.layers.dense({
+  //       units: NUM_CLASSES,
+  //       kernelInitializer: 'varianceScaling',
+  //       useBias: false,
+  //       activation: 'softmax'
+  //     })
+  //   ]
+  // });
+
   while (isPredicting) {
     const predictedClass = tf.tidy(() => {
       // Capture the frame from the webcam.
@@ -149,10 +185,12 @@ async function predict() {
       const activation = mobilenet.predict(img);
       // Make a prediction through our newly-trained model using the activation
       // from mobilenet as input.
+
       const predictions = model.predict(activation);
       // Returns the index with the maximum probability. This number corresponds
       // to the class the model thinks is the most probable given the input.
       return predictions.as1D().argMax();
+
     });
     const classId = (await predictedClass.data())[0];
     console.log(result[classId]);
@@ -184,6 +222,8 @@ const onPredict = () => {
 };
 
 
+
+
 async function init() {
   try {
     await webcam.setup();
@@ -209,6 +249,17 @@ window.addEventListener('load', function() {
       });
 
 
+class App extends Component{
+  render() {
+    return(
+      <Router history={browserHistory}>
+        <Route path={"/"} component={MLapp}></Route>
+      </Router>
+    );
+  }
+};
+
+
 class MLapp extends Component {
 
   constructor(props) {
@@ -218,9 +269,14 @@ class MLapp extends Component {
     smileLabel:0,
     account:web3.eth.accounts[0],
     others:0,
-    smilecoin:0
-  }
+    smilecoin:0,
+    added_file_hash: null
 
+  }
+  this.captureFile = this.captureFile.bind(this)
+  this.handleSubmit = this.handleSubmit.bind(this)
+  this.loadModel = this.loadModel.bind(this);
+  this.saveModel = this.saveModel.bind(this);
   this.startPredict = this.startPredict.bind(this);
   this.startTrain = this.startTrain.bind(this);
   this.incrementSmile = this.incrementSmile.bind(this);
@@ -241,7 +297,6 @@ class MLapp extends Component {
 
   incrementSmile() {
     ExampleHandler(0);
-    //this.setState( {account:web3.eth.accounts[0]});
     this.setState({ smileLabel: this.state.smileLabel + 1 });
   }
 
@@ -258,6 +313,36 @@ class MLapp extends Component {
     this.setState( {account:web3.eth.accounts[0]});
   }
 
+  async saveModel(){
+    const saveResult = await model.save(tf.io.browserHTTPRequest(
+      'http://localhost:8080/ipfs/upload',
+      {method: 'POST', headers: {'Content-Type': 'application/json', 'key':'tfmodel'}}));
+  }
+
+
+  async loadModel(){
+    //const model = await tf.loadModel('https://ipfs.infura.io/ipfs/QmeFJwAHQpTAd8Ni2iWWqZ4jiWLPFxveHsZbe5gCsFf8VL');
+    //alert("loaded!");
+
+
+    const modelCID = 'QmeFJwAHQpTAd8Ni2iWWqZ4jiWLPFxveHsZbe5gCsFf8VL'
+    const weightsCID = 'QmXqNrKne253rkqi86GS6qKDGfBQFkVVuWf3ywQYVUddSh'
+
+    var filesModel = await ipfs.files.get(modelCID);
+    //console.log(filesModel[0].content);
+    fileDownload(filesModel[0].content.toString('utf8'), 'smileModel.json');
+
+    var filesWeights = await ipfs.files.get(weightsCID);
+    //console.log(filesWeights);
+
+    fileDownload(filesWeights[0].content.toString('utf8'), 'smileModel.weights.bin');
+
+    var modelurl = "https://ipfs.infura.io/ipfs/QmeFJwAHQpTAd8Ni2iWWqZ4jiWLPFxveHsZbe5gCsFf8VL";
+    var weightsurl = "https://ipfs.infura.io/ipfs/QmXqNrKne253rkqi86GS6qKDGfBQFkVVuWf3ywQYVUddSh";
+ 
+    
+  }
+
   componentDidMount() {
      this.setState( {account:web3.eth.accounts[0]});
   }
@@ -265,6 +350,43 @@ class MLapp extends Component {
   componentWillMount(){
     this.setState( {account:web3.eth.accounts[0]});
   }
+  
+  captureFile (event) {
+  event.stopPropagation()
+  event.preventDefault()
+  const file = event.target.files[0]
+  let reader = new window.FileReader()
+  reader.onloadend = () => this.saveToIpfs(reader)
+  reader.readAsArrayBuffer(file)
+}
+
+// get and load the model 
+async captureModel (event) {
+  event.stopPropagation()
+  event.preventDefault()
+  const modelFile = await event.target.files[0];
+  //const weightsFile = await event.target.files[1];
+  const model = await tf.loadModel(tf.io.browserFiles([modelFile, weightsFile]));
+}
+
+saveToIpfs (reader) {
+  let ipfsId
+  const buffer = Buffer.from(reader.result)
+  ipfs.add(buffer, { progress: (prog) => console.log(`received: ${prog}`) })
+    .then((response) => {
+      console.log(response)
+      ipfsId = response[0].hash
+      console.log(ipfsId)
+      this.setState({added_file_hash: ipfsId})
+    }).catch((err) => {
+      console.error(err)
+    })
+}
+
+handleSubmit (event) {
+  event.preventDefault()
+}
+
   render() {
     return (
       <Layout>
@@ -282,11 +404,28 @@ class MLapp extends Component {
           <br/>
           <br/>
           <Button type="primary" onClick={this.showAccount}>Show Account</Button>
+          <Button type="primary" onClick={this.saveModel}>Save Model</Button>
+          <Button type="primary" onClick={this.loadModel}>Load Model</Button>
           </Content>
+          <div>
+          <form id='captureMedia' onSubmit={this.handleSubmit}>
+            <input type='file' onChange={this.captureFile} />
+          </form>
+          <p>Model below</p>
+          <form id='captureMedia' onSubmit={this.handleSubmit}>
+            <input type='file' onChange={this.captureModel}/>
+          </form>
+          <div>
+            <a target='_blank'
+              href={'https://ipfs.infura.io/ipfs/' + this.state.added_file_hash}>
+              {this.state.added_file_hash}
+            </a>
+          </div>
+        </div>
       </Layout>
     );
   }
 }
 init();
 
-export default MLapp;
+export default App;
